@@ -10,60 +10,38 @@ const config = konphyg(path.join(__dirname, 'config')).all()
 
 
 
- let getConnection = () => {
-   var promise = new Promise(() => {
+let getConnection = () => {
+     //create subject
+     const subject = new rx.Subject()
      let connection = amqp.createConnection(config.rabbit)
 
      connection.on('error', (e) => {
        console.log("Error related to amqp: ", e)
+       reject(e)
      })
 
-      connection.on('ready', () => {
-        console.log('connected...')
-      })
-
      connection.on('ready', () => {
+       console.log('connected...')
+
        let queueOptions = {
          durable: true,
          autoDelete: false
        }
+
        let q = connection.queue('test', queueOptions, (queue) => {
-         
+
            q.subscribe((message) => {
             let data = message.data.toString()
-             console.log(data)
+             subject.next(data)
            })
       })
     })
-
-  })
-
-   return promise
-
+   return subject
 }
 
-//Observer
-let Observer = {
-  next(value){
-    console.log(value)
-  },
-  error(err){
-    console.log(err)
-  },
-  complete(){
-    console.log(complete)
-  }
-}
 
-//TODO Obserable
 let processMessages = (Observer) => {
-  getConnection()
-      .then((data) => {
-        console.log(data,'In promise:)')
-      })
-      .catch((err) => {
-        console.log('errror', err);
-      })
+  getConnection().subscribe((data) => console.log(data), null, () => console.log('finished'))
 }
 
 processMessages()
